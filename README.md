@@ -5,9 +5,10 @@
 > | Evidência | Link |
 > |---|---|
 > | GitHub público | `https://github.com/lucascsalles/conectadoa-api` |
-> | API no Azure (Swagger em `/`) | `https://<PREENCHER>.azurecontainerapps.io/` |
+> | API no Azure (Swagger em `/`) | `https://conectadoa-api-554789.icyhill-bd77f9f6.brazilsouth.azurecontainerapps.io/` |
 > | Docker Hub | `https://hub.docker.com/r/lucascsalles/conectadoa-api` |
 > | GitHub Actions | aba **Actions** → workflow **Continuous Delivery** |
+> | Evidências (prints) | [seção 9](#9-evidências-de-funcionamento) e pasta `docs/evidencias/` |
 
 ---
 
@@ -106,11 +107,11 @@ Todas as Controllers usam `@RequestMapping("api/${api.version}/...")`, com `api.
 | Workflow automático após push na `main` | `.github/workflows/continuous_delivery.yml` (`on: push: branches: [main]`) |
 | Build da aplicação e da imagem | `docker/build-push-action` executa o Dockerfile, que roda `mvn clean package` |
 | Autenticação e publicação | `docker/login-action` com `vars.DOCKER_USER` e `secrets.DOCKER_TOKEN`; push das tags `latest`, `v<run>` e `<commit>` |
-| Evidência | Histórico da aba **Actions** do repositório |
+| Evidência | Histórico da aba **Actions** do repositório e prints na [seção 9](#9-evidências-de-funcionamento) |
 
 ### 3.1 Azure e SQL Server
 
-A aplicação roda em **Azure Container Apps**, com a imagem vinda do Docker Hub, e usa um **Azure SQL Database**. O profile `prd` lê a conexão de variáveis de ambiente, e a senha é um secret do Container App. O passo a passo completo está em [`DEPLOY_AZURE.md`](DEPLOY_AZURE.md).
+A aplicação roda em **Azure Container Apps**, com a imagem vinda do Docker Hub, e usa um **Azure SQL Database**. O profile `prd` lê a conexão de variáveis de ambiente, e a senha é um secret do Container App. O passo a passo completo está em [`DEPLOY_AZURE.md`](DEPLOY_AZURE.md). As evidências de funcionamento e de persistência estão na [seção 9](#9-evidências-de-funcionamento).
 
 ---
 
@@ -191,7 +192,7 @@ docker run -p 8080:8080 \
 - Variable `DOCKER_USER`: usuário do Docker Hub.
 - Secret `DOCKER_TOKEN`: access token do Docker Hub.
 
-**URL no Azure:** `https://<PREENCHER>.azurecontainerapps.io/` (Swagger em `/`).
+**URL no Azure:** `https://conectadoa-api-554789.icyhill-bd77f9f6.brazilsouth.azurecontainerapps.io/` (Swagger em `/`).
 
 ---
 
@@ -216,7 +217,7 @@ A forma mais simples é pelo **Swagger** (`/`), local ou no Azure: abra a rota, 
 A sequência abaixo faz o mesmo com `curl` no Bash, Linux, macOS ou Git Bash. Ela cobre o CRUD das 4 entidades e os códigos HTTP esperados. Defina antes:
 
 ```bash
-BASE=http://localhost:8080/api/v1   # ou https://<PREENCHER>.azurecontainerapps.io/api/v1
+BASE=http://localhost:8080/api/v1   # ou https://conectadoa-api-554789.icyhill-bd77f9f6.brazilsouth.azurecontainerapps.io/api/v1
 ```
 
 Observações:
@@ -350,3 +351,62 @@ SELECT * FROM reservas;
 | Instituto Íris de Luz | Ribeirão Preto - SP | https://www.institutoirisdeluz.ong.br/materialescolar |
 
 As condições de recebimento devem ser confirmadas diretamente com cada organização.
+
+---
+
+## 9. Evidências de funcionamento
+
+Os prints abaixo foram tirados em 13/11/2026, com a API implantada no Azure. Os arquivos ficam em `docs/evidencias/`.
+
+### 9.1 GitHub Actions: workflow executado após push na `main`
+
+O workflow **Continuous Delivery** rodou automaticamente após o push e terminou com sucesso: compilou a aplicação, gerou a imagem e publicou no Docker Hub.
+
+![GitHub Actions](docs/evidencias/01-github-actions.png)
+
+### 9.2 Docker Hub: imagem publicada com tags
+
+O repositório `lucascsalles/conectadoa-api` tem as tags `latest`, `v1` e `e8eaa3d` (o commit).
+
+![Docker Hub](docs/evidencias/02-docker-hub-tags.png)
+
+### 9.3 Azure Container Apps: aplicação em execução
+
+O Container App `conectadoa-api-554789` está com status "Em execução" na região Brazil South, com URL pública.
+
+![Azure Container App](docs/evidencias/03-azure-container-app.png)
+
+### 9.4 Swagger acessível a partir da URL do Azure
+
+A rota `/` redireciona para o Swagger UI, com os endpoints `/api/v1/...` documentados.
+
+![Swagger no Azure](docs/evidencias/04-swagger-azure.png)
+
+### 9.5 Testes das rotas e respostas HTTP no Azure
+
+O roteiro da [seção 6](#6-como-testar-a-solução) foi executado contra a URL do Azure. As 31 chamadas retornaram o código esperado: 201, 200, 204, 400, 403, 404 e 409.
+
+![Testes no Azure](docs/evidencias/05-testes-curl-azure.png)
+
+### 9.6 Persistência no SQL Server (Azure SQL Database)
+
+Os dados criados pelos testes foram consultados no banco `conectadoa`, pelo Query editor do portal do Azure. Eles mostram:
+
+- **Usuários:** Ana e Bruno. A Carla foi excluída no teste.
+- **Materiais:** a mochila com status `ENTREGUE` e os cadernos com status `RESERVADO`.
+- **Reservas:**
+  - uma reserva de pessoa, já entregue e com data de entrega;
+  - uma destinação para a ONG 1.
+  - A reserva 2 foi cancelada no teste, por isso não aparece.
+- **ONGs:** as 3 ONGs iniciais, inseridas pelo `data.sql`, com acentuação correta.
+
+![Tabela usuarios](docs/evidencias/06-sql-usuarios.png)
+
+![Tabela materiais](docs/evidencias/07-sql-materiais.png)
+
+![Tabela reservas](docs/evidencias/08-sql-reservas.png)
+
+![Tabela ongs](docs/evidencias/09-sql-ongs.png)
+
+Depois dos prints, o banco do Azure foi limpo e voltou a ter só as 3 ONGs iniciais. Assim, o roteiro da seção 6 pode ser executado novamente com os mesmos IDs.
+
